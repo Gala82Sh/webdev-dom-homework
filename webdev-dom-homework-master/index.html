@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Проект "Комменты"</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <div class="container">
+      <ul class="comments">
+        <li class="comment">
+          <div class="comment-header">
+            <div>Глеб Фокин</div>
+            <div>12.02.22 12:18</div>
+          </div>
+          <div class="comment-body">
+            <div class="comment-text">
+              Это будет первый комментарий на этой странице
+            </div>
+          </div>
+          <div class="comment-footer">
+            <div class="likes">
+              <span class="likes-counter">3</span>
+              <button class="like-button"></button>
+            </div>
+          </div>
+        </li>
+        <li class="comment">
+          <div class="comment-header">
+            <div>Варвара Н.</div>
+            <div>13.02.22 19:22</div>
+          </div>
+          <div class="comment-body">
+            <div class="comment-text">
+              Мне нравится как оформлена эта страница! ❤
+            </div>
+          </div>
+          <div class="comment-footer">
+            <div class="likes">
+              <span class="likes-counter">75</span>
+              <button class="like-button -active-like"></button>
+            </div>
+          </div>
+        </li>
+      </ul>
+      <div class="add-form">
+        <input
+          type="text"
+          class="add-form-name"
+          placeholder="Введите ваше имя"
+        />
+        <textarea
+          type="textarea"
+          class="add-form-text"
+          placeholder="Введите ваш коментарий"
+          rows="4"
+        ></textarea>
+        <div class="add-form-row">
+          <button class="add-form-button">Написать</button>
+        </div>
+      </div>
+    </div>
+  </body>
+
+  <script>
+ let comments = [
+  {
+    id: 1,
+    name: "Глеб Фокин",
+    text: "Это будет первый комментарий на этой странице",
+    date: "12.02.22 12:18",
+    likes: 3,
+    isLiked: false
+  },
+  {
+    id: 2,
+    name: "Варвара Н.",
+    text: "Мне нравится как оформлена эта страница! ❤",
+    date: "13.02.22 19:22",
+    likes: 75,
+    isLiked: true
+  }
+];
+
+
+function getCurrentDateTime() {
+  const now = new Date();
+  const day = String(now.getDate()).padStart(2, '0');
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const year = now.getFullYear();
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${day}.${month}.${year} ${hours}:${minutes}`;
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+
+function renderComments() {
+  const commentsList = document.querySelector('.comments');
+  
+  if (!commentsList) {
+    console.error('Список комментариев не найден!');
+    return;
+  }
+  
+ commentsList.innerHTML = '';
+  
+  for (let i = 0; i < comments.length; i++) {
+    const comment = comments[i];
+    const likeButtonClass = comment.isLiked ? 'like-button -active-like' : 'like-button';
+    const commentHtml = `
+      <li class="comment" data-id="${comment.id}">
+        <div class="comment-header">
+          <div>${escapeHtml(comment.name)}</div>
+          <div>${escapeHtml(comment.date)}</div>
+        </div>
+        <div class="comment-body">
+          <div class="comment-text">
+            ${escapeHtml(comment.text)}
+          </div>
+        </div>
+        <div class="comment-footer">
+          <div class="likes">
+            <span class="likes-counter">${comment.likes}</span>
+            <button class="${likeButtonClass}" data-id="${comment.id}"></button>
+          </div>
+        </div>
+      </li>
+    `;
+    
+    commentsList.insertAdjacentHTML('beforeend', commentHtml);
+  }
+  
+ attachLikeHandlers();
+}
+
+function attachLikeHandlers() {
+  const likeButtons = document.querySelectorAll('.like-button');
+  
+  for (let i = 0; i < likeButtons.length; i++) {
+    const button = likeButtons[i];
+    
+    button.removeEventListener('click', handleLikeClick);
+   
+    button.addEventListener('click', handleLikeClick);
+  }
+}
+
+function handleLikeClick(event) {
+  const button = event.currentTarget;
+  const commentId = parseInt(button.getAttribute('data-id'));
+  
+ 
+  let comment = null;
+  for (let i = 0; i < comments.length; i++) {
+    if (comments[i].id === commentId) {
+      comment = comments[i];
+      break;
+    }
+  }
+  
+  if (comment) {
+    
+    if (comment.isLiked) {
+      comment.isLiked = false;
+      comment.likes = comment.likes - 1;
+    } else {
+      comment.isLiked = true;
+      comment.likes = comment.likes + 1;
+    }
+    
+  renderComments();
+  }
+}
+
+function addNewComment(name, text) {
+  const newComment = {
+    id: Date.now(), 
+    name: name,
+    text: text,
+    date: getCurrentDateTime(),
+    likes: 0,
+    isLiked: false
+  };
+  comments.push(newComment);
+  renderComments();
+}
+
+const nameInput = document.querySelector('.add-form-name');
+const commentInput = document.querySelector('.add-form-text');
+const addButton = document.querySelector('.add-form-button');
+
+function validateAndAdd() {
+  const name = nameInput.value.trim();
+  const comment = commentInput.value.trim();
+  
+  if (name === '') {
+    alert('Пожалуйста, введите ваше имя');
+    return;
+  }
+  
+  if (comment === '') {
+    alert('Пожалуйста, введите текст комментария');
+    return;
+  }
+  
+  addNewComment(name, comment);
+  
+  nameInput.value = '';
+  commentInput.value = '';
+}
+
+addButton.addEventListener('click', validateAndAdd);
+commentInput.addEventListener('keypress', function(event) {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    validateAndAdd();
+  }
+});
+
+renderComments();
+</script>
+</html>
