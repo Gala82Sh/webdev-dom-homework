@@ -1,9 +1,10 @@
-import { comments } from './comments.js';
+import { getComments } from './comments.js';
 
 export function handleCommentClick(event) {
   const commentElement = event.currentTarget;
   const commentId = parseInt(commentElement.getAttribute('data-id'));
   
+  const comments = getComments();
   const comment = comments.find(c => c.id === commentId);
   
   if (comment) {

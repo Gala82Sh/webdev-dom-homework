@@ -1,6 +1,10 @@
 import { sanitizeHtml } from './sanitize.js';
-import { comments } from './comments.js';
+import { setComments, getComments } from './comments.js';
 import { renderComments } from './render.js';
+
+
+const USER_KEY = 'gala-sh';  
+const API_BASE_URL = `https://wedev-api.sky.pro/api/v1/${USER_KEY}/comments`;
 
 export function getCurrentDateTime() {
   const now = new Date();
@@ -12,17 +16,92 @@ export function getCurrentDateTime() {
   return `${day}.${month}.${year} ${hours}:${minutes}`;
 }
 
-export function addNewComment(name, text) {
-  const newComment = {
-    id: Date.now(),
+
+export async function fetchCommentsFromApi() {
+  try {
+    const response = await fetch(API_BASE_URL);
+    
+    if (!response.ok) {
+      throw new Error(`Ошибка загрузки: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    const commentsFromApi = data.comments.map((comment, index) => ({
+      id: comment.id || index + 1,
+      name: comment.author.name,
+      text: comment.text,
+      date: formatDate(comment.date),
+      likes: comment.likes || 0,
+      isLiked: comment.isLiked || false
+    }));
+    
+    setComments(commentsFromApi);
+    renderComments();
+    return commentsFromApi;
+  } catch (error) {
+    console.error('Ошибка при загрузке комментариев:', error);
+    alert('Не удалось загрузить комментарии. Попробуйте позже.');
+    return [];
+  }
+}
+
+
+function formatDate(dateString) {
+  if (!dateString) return getCurrentDateTime();
+  const date = new Date(dateString);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${day}.${month}.${year} ${hours}:${minutes}`;
+}
+
+
+export async function postCommentToApi(name, text) {
+ 
+  if (name.length < 3) {
+    alert('Имя должно содержать хотя бы 3 символа');
+    return false;
+  }
+  if (text.length < 3) {
+    alert('Текст комментария должен содержать хотя бы 3 символа');
+    return false;
+  }
+  
+  try {
+   
+   const response = await fetch(API_BASE_URL, {
+  method: 'POST',
+  body: JSON.stringify({
     name: sanitizeHtml(name),
     text: sanitizeHtml(text),
-    date: getCurrentDateTime(),
-    likes: 0,
-    isLiked: false
-  };
-  comments.push(newComment);
-  renderComments();
+  }),
+}); 
+    
+    if (response.status === 400) {
+      const error = await response.json();
+      alert(`Ошибка: ${error.error}`);
+      return false;
+    }
+    
+    if (!response.ok) {
+      throw new Error(`Ошибка отправки: ${response.status}`);
+    }
+    
+
+    await fetchCommentsFromApi();
+    return true;
+  } catch (error) {
+    console.error('Ошибка при отправке комментария:', error);
+    alert('Не удалось отправить комментарий. Попробуйте позже.');
+    return false;
+  }
+}
+
+export function addNewComment(name, text) {
+  postCommentToApi(name, text);
 }
 
 export function validateAndAdd(nameInput, commentInput) {

@@ -1,10 +1,11 @@
-import { comments } from './comments.js';
+import { getComments } from './comments.js';
 import { escapeHtml } from './sanitize.js';
 import { handleLikeClick } from './likeHandler.js';
 import { handleCommentClick } from './commentHandler.js';
 
 export function renderComments() {
   const commentsList = document.querySelector('.comments');
+  const comments = getComments();
   
   if (!commentsList) {
     console.error('Список комментариев не найден!');
