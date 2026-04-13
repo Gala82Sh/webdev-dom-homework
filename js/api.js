@@ -2,9 +2,18 @@ import { sanitizeHtml } from './sanitize.js';
 import { setComments, getComments } from './comments.js';
 import { renderComments } from './render.js';
 
-
-const USER_KEY = 'gala-sh';  
+const USER_KEY = 'gala-sh';
 const API_BASE_URL = `https://wedev-api.sky.pro/api/v1/${USER_KEY}/comments`;
+
+let commentsLoader = null;
+let addForm = null;
+let addFormLoader = null;
+
+function initLoaders() {
+  commentsLoader = document.getElementById('comments-loader');
+  addForm = document.querySelector('.add-form');
+  addFormLoader = document.querySelector('.add-form-loader');
+}
 
 export function getCurrentDateTime() {
   const now = new Date();
@@ -16,8 +25,33 @@ export function getCurrentDateTime() {
   return `${day}.${month}.${year} ${hours}:${minutes}`;
 }
 
+function showCommentsLoader() {
+  if (commentsLoader) commentsLoader.style.display = 'block';
+  const commentsList = document.querySelector('.comments');
+  if (commentsList) commentsList.style.display = 'none';
+}
+
+function hideCommentsLoader() {
+  if (commentsLoader) commentsLoader.style.display = 'none';
+  const commentsList = document.querySelector('.comments');
+  if (commentsList) commentsList.style.display = 'block';
+}
+
+function showAddFormLoader() {
+  if (addForm) addForm.style.display = 'none';
+  if (addFormLoader) addFormLoader.style.display = 'block';
+}
+
+function hideAddFormLoader() {
+  if (addForm) addForm.style.display = 'flex';
+  if (addFormLoader) addFormLoader.style.display = 'none';
+}
 
 export async function fetchCommentsFromApi() {
+   await new Promise(resolve => setTimeout(resolve, 1500));
+  initLoaders();
+  showCommentsLoader();
+  
   try {
     const response = await fetch(API_BASE_URL);
     
@@ -43,9 +77,10 @@ export async function fetchCommentsFromApi() {
     console.error('Ошибка при загрузке комментариев:', error);
     alert('Не удалось загрузить комментарии. Попробуйте позже.');
     return [];
+  } finally {
+    hideCommentsLoader();
   }
 }
-
 
 function formatDate(dateString) {
   if (!dateString) return getCurrentDateTime();
@@ -58,9 +93,7 @@ function formatDate(dateString) {
   return `${day}.${month}.${year} ${hours}:${minutes}`;
 }
 
-
 export async function postCommentToApi(name, text) {
- 
   if (name.length < 3) {
     alert('Имя должно содержать хотя бы 3 символа');
     return false;
@@ -70,15 +103,16 @@ export async function postCommentToApi(name, text) {
     return false;
   }
   
+  showAddFormLoader();
+  
   try {
-   
-   const response = await fetch(API_BASE_URL, {
-  method: 'POST',
-  body: JSON.stringify({
-    name: sanitizeHtml(name),
-    text: sanitizeHtml(text),
-  }),
-}); 
+    const response = await fetch(API_BASE_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        name: sanitizeHtml(name),
+        text: sanitizeHtml(text),
+      }),
+    });
     
     if (response.status === 400) {
       const error = await response.json();
@@ -90,18 +124,19 @@ export async function postCommentToApi(name, text) {
       throw new Error(`Ошибка отправки: ${response.status}`);
     }
     
-
     await fetchCommentsFromApi();
     return true;
   } catch (error) {
     console.error('Ошибка при отправке комментария:', error);
     alert('Не удалось отправить комментарий. Попробуйте позже.');
     return false;
+  } finally {
+    hideAddFormLoader();
   }
 }
 
 export function addNewComment(name, text) {
-  postCommentToApi(name, text);
+  return postCommentToApi(name, text);
 }
 
 export function validateAndAdd(nameInput, commentInput) {

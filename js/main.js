@@ -1,6 +1,5 @@
 import { fetchCommentsFromApi } from './api.js';
 import { validateAndAdd } from './api.js';
-import { renderComments } from './render.js';
 
 const nameInput = document.querySelector('.add-form-name');
 const commentInput = document.querySelector('.add-form-text');
@@ -17,13 +16,7 @@ commentInput.addEventListener('keypress', (event) => {
   }
 });
 
-
 async function init() {
- const commentsList = document.querySelector('.comments');
-  if (commentsList) {
-    commentsList.innerHTML = '<li>Загрузка комментариев...</li>';
-  }
-  
   await fetchCommentsFromApi();
 }
 

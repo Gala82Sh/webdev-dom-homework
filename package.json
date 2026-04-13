@@ -1,8 +1,9 @@
 {
-  "name": "webdev-dom-homework-master",
+  "name": "webdev-dom-homework",
   "version": "1.0.0",
-  "description": "https://glebkaf.github.io/webdev-dom-homework/",
-  "main": "index.js",
+  "description": "Проект лента комментариев",
+  "main": "index.html",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -11,17 +12,16 @@
     "url": "git+https://github.com/Gala82Sh/webdev-dom-homework.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "Gala82Sh",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/Gala82Sh/webdev-dom-homework/issues"
   },
   "homepage": "https://github.com/Gala82Sh/webdev-dom-homework#readme",
   "devDependencies": {
-    "eslint": "^10.2.0",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-prettier": "^5.5.5",
-    "prettier": "^3.8.2"
+    "eslint": "^8.0.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "prettier": "^3.0.0"
   }
 }
