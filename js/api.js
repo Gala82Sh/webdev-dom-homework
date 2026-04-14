@@ -48,7 +48,6 @@ function hideAddFormLoader() {
 }
 
 export async function fetchCommentsFromApi() {
-   await new Promise(resolve => setTimeout(resolve, 1500));
   initLoaders();
   showCommentsLoader();
   
@@ -124,7 +123,18 @@ export async function postCommentToApi(name, text) {
       throw new Error(`Ошибка отправки: ${response.status}`);
     }
     
-    await fetchCommentsFromApi();
+    const newComment = {
+      id: Date.now(),
+      name: sanitizeHtml(name),
+      text: sanitizeHtml(text),
+      date: getCurrentDateTime(),
+      likes: 0,
+      isLiked: false
+    };
+    const currentComments = getComments();
+    setComments([...currentComments, newComment]);
+    renderComments();
+    
     return true;
   } catch (error) {
     console.error('Ошибка при отправке комментария:', error);
@@ -149,6 +159,14 @@ export function validateAndAdd(nameInput, commentInput) {
   }
   if (comment === '') {
     alert('Пожалуйста, введите текст комментария');
+    return false;
+  }
+  if (name.length < 3) {
+    alert('Имя должно содержать хотя бы 3 символа');
+    return false;
+  }
+  if (comment.length < 3) {
+    alert('Текст комментария должен содержать хотя бы 3 символа');
     return false;
   }
   
