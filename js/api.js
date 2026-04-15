@@ -47,12 +47,27 @@ function hideAddFormLoader() {
   if (addFormLoader) addFormLoader.style.display = 'none';
 }
 
+function isOnline() {
+  return navigator.onLine;
+}
+
 export async function fetchCommentsFromApi() {
+ 
+  if (!isOnline()) {
+    alert('Кажется, у вас сломался интернет, попробуйте позже');
+    return [];
+  }
+
   initLoaders();
   showCommentsLoader();
   
   try {
     const response = await fetch(API_BASE_URL);
+    
+    if (response.status === 500) {
+      alert('Сервер сломался, попробуй позже');
+      return [];
+    }
     
     if (!response.ok) {
       throw new Error(`Ошибка загрузки: ${response.status}`);
@@ -73,8 +88,12 @@ export async function fetchCommentsFromApi() {
     renderComments();
     return commentsFromApi;
   } catch (error) {
-    console.error('Ошибка при загрузке комментариев:', error);
-    alert('Не удалось загрузить комментарии. Попробуйте позже.');
+    if (error.message === 'Failed to fetch') {
+      alert('Кажется, у вас сломался интернет, попробуйте позже');
+    } else {
+      console.error('Ошибка при загрузке комментариев:', error);
+      alert('Не удалось загрузить комментарии. Попробуйте позже.');
+    }
     return [];
   } finally {
     hideCommentsLoader();
@@ -92,7 +111,13 @@ function formatDate(dateString) {
   return `${day}.${month}.${year} ${hours}:${minutes}`;
 }
 
-export async function postCommentToApi(name, text) {
+
+export async function postCommentToApi(name, text, retryCount = 0) {
+ 
+  if (!isOnline()) {
+    alert('Кажется, у вас сломался интернет, попробуйте позже');
+    return false;
+  }
   if (name.length < 3) {
     alert('Имя должно содержать хотя бы 3 символа');
     return false;
@@ -115,7 +140,17 @@ export async function postCommentToApi(name, text) {
     
     if (response.status === 400) {
       const error = await response.json();
-      alert(`Ошибка: ${error.error}`);
+      alert(`Ошибка: ${error.error || 'Некорректные данные'}`);
+      return false;
+    }
+    
+    if (response.status === 500) {
+      if (retryCount < 3) {
+        console.log(`Повторная попытка ${retryCount + 1}...`);
+        await new Promise(resolve => setTimeout(resolve, 1000)); 
+        return postCommentToApi(name, text, retryCount + 1);
+      }
+      alert('Сервер сломался, попробуй позже');
       return false;
     }
     
@@ -123,22 +158,15 @@ export async function postCommentToApi(name, text) {
       throw new Error(`Ошибка отправки: ${response.status}`);
     }
     
-    const newComment = {
-      id: Date.now(),
-      name: sanitizeHtml(name),
-      text: sanitizeHtml(text),
-      date: getCurrentDateTime(),
-      likes: 0,
-      isLiked: false
-    };
-    const currentComments = getComments();
-    setComments([...currentComments, newComment]);
-    renderComments();
-    
+    await fetchCommentsFromApi();
     return true;
   } catch (error) {
-    console.error('Ошибка при отправке комментария:', error);
-    alert('Не удалось отправить комментарий. Попробуйте позже.');
+    if (error.message === 'Failed to fetch') {
+      alert('Кажется, у вас сломался интернет, попробуйте позже');
+    } else {
+      console.error('Ошибка при отправке комментария:', error);
+      alert('Не удалось отправить комментарий. Попробуйте позже.');
+    }
     return false;
   } finally {
     hideAddFormLoader();
@@ -148,7 +176,6 @@ export async function postCommentToApi(name, text) {
 export function addNewComment(name, text) {
   return postCommentToApi(name, text);
 }
-
 export function validateAndAdd(nameInput, commentInput) {
   const name = nameInput.value.trim();
   const comment = commentInput.value.trim();
@@ -161,6 +188,7 @@ export function validateAndAdd(nameInput, commentInput) {
     alert('Пожалуйста, введите текст комментария');
     return false;
   }
+  
   if (name.length < 3) {
     alert('Имя должно содержать хотя бы 3 символа');
     return false;
