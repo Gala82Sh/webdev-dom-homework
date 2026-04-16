@@ -1,6 +1,7 @@
 import { sanitizeHtml } from './sanitize.js';
 import { setComments, getComments } from './comments.js';
 import { renderComments } from './render.js';
+import { getToken } from './auth.js';
 
 const USER_KEY = 'gala-sh';
 const API_BASE_URL = `https://wedev-api.sky.pro/api/v1/${USER_KEY}/comments`;
@@ -52,7 +53,6 @@ function isOnline() {
 }
 
 export async function fetchCommentsFromApi() {
- 
   if (!isOnline()) {
     alert('Кажется, у вас сломался интернет, попробуйте позже');
     return [];
@@ -75,11 +75,13 @@ export async function fetchCommentsFromApi() {
     
     const data = await response.json();
     
-    const commentsFromApi = data.comments.map((comment, index) => ({
+    const commentsArray = Array.isArray(data) ? data : (data.comments || []);
+    
+    const commentsFromApi = commentsArray.map((comment, index) => ({
       id: comment.id || index + 1,
-      name: comment.author.name,
+      name: comment.author || comment.name,
       text: comment.text,
-      date: formatDate(comment.date),
+      date: comment.date || getCurrentDateTime(),
       likes: comment.likes || 0,
       isLiked: comment.isLiked || false
     }));
@@ -100,24 +102,19 @@ export async function fetchCommentsFromApi() {
   }
 }
 
-function formatDate(dateString) {
-  if (!dateString) return getCurrentDateTime();
-  const date = new Date(dateString);
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${day}.${month}.${year} ${hours}:${minutes}`;
-}
-
-
 export async function postCommentToApi(name, text, retryCount = 0) {
- 
+  const token = getToken();
+  
+  if (!token) {
+    alert('Вы не авторизованы');
+    return false;
+  }
+  
   if (!isOnline()) {
     alert('Кажется, у вас сломался интернет, попробуйте позже');
     return false;
   }
+  
   if (name.length < 3) {
     alert('Имя должно содержать хотя бы 3 символа');
     return false;
@@ -132,6 +129,9 @@ export async function postCommentToApi(name, text, retryCount = 0) {
   try {
     const response = await fetch(API_BASE_URL, {
       method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,  
+      },
       body: JSON.stringify({
         name: sanitizeHtml(name),
         text: sanitizeHtml(text),
@@ -144,10 +144,18 @@ export async function postCommentToApi(name, text, retryCount = 0) {
       return false;
     }
     
+    if (response.status === 401) {
+      alert('Сессия истекла. Войдите заново.');
+      localStorage.removeItem('comment_app_token');
+      localStorage.removeItem('comment_app_user');
+      window.location.reload();
+      return false;
+    }
+    
     if (response.status === 500) {
       if (retryCount < 3) {
         console.log(`Повторная попытка ${retryCount + 1}...`);
-        await new Promise(resolve => setTimeout(resolve, 1000)); 
+        await new Promise(resolve => setTimeout(resolve, 1000));
         return postCommentToApi(name, text, retryCount + 1);
       }
       alert('Сервер сломался, попробуй позже');
@@ -176,6 +184,7 @@ export async function postCommentToApi(name, text, retryCount = 0) {
 export function addNewComment(name, text) {
   return postCommentToApi(name, text);
 }
+
 export function validateAndAdd(nameInput, commentInput) {
   const name = nameInput.value.trim();
   const comment = commentInput.value.trim();

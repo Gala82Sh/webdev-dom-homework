@@ -2,6 +2,7 @@ import { getComments } from './comments.js';
 import { escapeHtml } from './sanitize.js';
 import { handleLikeClick } from './likeHandler.js';
 import { handleCommentClick } from './commentHandler.js';
+import { isAuthenticated, getUser } from './auth.js';
 
 export function renderComments() {
   const commentsList = document.querySelector('.comments');
@@ -43,6 +44,7 @@ export function renderComments() {
   
   attachLikeHandlers();
   attachCommentClickHandlers();
+  updateFormByAuth();
 }
 
 function attachLikeHandlers() {
@@ -59,4 +61,45 @@ function attachCommentClickHandlers() {
     commentElement.removeEventListener('click', handleCommentClick);
     commentElement.addEventListener('click', handleCommentClick);
   });
+}
+
+function updateFormByAuth() {
+  const addForm = document.querySelector('.add-form');
+  const authMessage = document.querySelector('.auth-message');
+  const nameInput = document.querySelector('.add-form-name');
+  
+  if (isAuthenticated()) {
+    if (addForm) addForm.style.display = 'flex';
+    if (authMessage) authMessage.style.display = 'none';
+    
+    const user = getUser();
+    if (nameInput && user && user.name) {
+      nameInput.value = user.name;
+      nameInput.readOnly = true;
+    }
+  } else {
+    if (addForm) addForm.style.display = 'none';
+    
+    if (!authMessage) {
+      const container = document.querySelector('.container');
+      const message = document.createElement('div');
+      message.className = 'auth-message';
+      message.innerHTML = `
+        <p>Чтобы добавить комментарий, <a href="#" id="login-link">авторизуйтесь</a></p>
+      `;
+      container.insertBefore(message, addForm);
+      
+      const loginLink = document.getElementById('login-link');
+      if (loginLink) {
+        loginLink.addEventListener('click', (event) => {
+          event.preventDefault();
+          import('./login.js').then(module => {
+            module.renderLoginPage();
+          });
+        });
+      }
+    } else {
+      authMessage.style.display = 'block';
+    }
+  }
 }
