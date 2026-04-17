@@ -52,6 +52,19 @@ function isOnline() {
   return navigator.onLine;
 }
 
+
+function formatDate(dateString) {
+  if (!dateString) return getCurrentDateTime();
+  const date = new Date(dateString);
+  return date.toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 export async function fetchCommentsFromApi() {
   if (!isOnline()) {
     alert('Кажется, у вас сломался интернет, попробуйте позже');
@@ -79,9 +92,9 @@ export async function fetchCommentsFromApi() {
     
     const commentsFromApi = commentsArray.map((comment, index) => ({
       id: comment.id || index + 1,
-      name: comment.author || comment.name,
+      name: comment.author?.name || comment.name || 'Аноним',
       text: comment.text,
-      date: comment.date || getCurrentDateTime(),
+      date: formatDate(comment.date),
       likes: comment.likes || 0,
       isLiked: comment.isLiked || false
     }));
@@ -130,7 +143,7 @@ export async function postCommentToApi(name, text, retryCount = 0) {
     const response = await fetch(API_BASE_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,  
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({
         name: sanitizeHtml(name),
